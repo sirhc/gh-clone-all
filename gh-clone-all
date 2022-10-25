@@ -35,4 +35,4 @@ while [[ $# -gt 0 ]]; do
 done
 
 gh repo list "$user" --json url --limit 1000 --jq '.[] | .url' |
-    parallel -j"$jobs" 'if [[ -n "'"$verbose"'" ]]; then echo {}; fi; gh get {}'
+    parallel -j"$jobs" 'if [[ -n "'"$verbose"'" ]]; then echo {}; fi; gh get -r {}'
