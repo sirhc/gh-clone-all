@@ -38,7 +38,7 @@ get_repos() {
     '
 }
 
-get_repos "${user#https://github.com/}" | head -2 | xargs -r -I '{}' -- sh -c '
+get_repos "${user#https://github.com/}" | xargs -r -I '{}' -- sh -c '
     if [[ ! -d "$( basename "{}" )" ]]; then
         gh repo clone "{}"
     fi
