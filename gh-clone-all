@@ -1,30 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 
 user=
-jobs=1
-verbose=
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
-            printf 'Usage: gh clone-all <user>\n'
-            printf '       gh clone-all https://github.com/<user>\n'
+            printf 'Usage: gh clone-all <user|org>\n'
+            printf '       gh clone-all https://github.com/<user|org>\n'
             exit 0
-            ;;
-        -j|--jobs)
-            jobs="$2"
-            shift
-            ;;
-        -j*)
-            jobs="${1#-j}"
-            ;;
-        --jobs=*)
-            jobs="${1#--jobs=}"
-            ;;
-        -v|--verbose)
-            verbose=1
             ;;
         *)
             user="$1"
@@ -34,5 +19,27 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-gh repo list "$user" --json url --limit 1000 --jq '.[] | .url' |
-    parallel -j"$jobs" 'if [[ -n "'"$verbose"'" ]]; then echo {}; fi; gh get -r {}'
+if [[ -z "$user" ]]; then
+    printf '%s: missing <user|org>\n' "$0" 1>&2
+    exit 1
+fi
+
+get_repos() {
+    local owner="$1"
+
+    gh api graphql --paginate -q '.data.repositoryOwner.repositories.nodes[] | .nameWithOwner' -F owner="$owner" -f query='
+        query($owner: String! $endCursor: String) {
+            repositoryOwner(login: $owner) {
+                repositories(first: 100 ownerAffiliations: OWNER isFork: false orderBy: { field: NAME direction: ASC} after: $endCursor) {
+                    totalCount pageInfo { hasNextPage endCursor } nodes { nameWithOwner }
+                }
+            }
+        }
+    '
+}
+
+get_repos "${user#https://github.com/}" | head -2 | xargs -r -I '{}' -- sh -c '
+    if [[ ! -d "$( basename "{}" )" ]]; then
+        gh repo clone "{}"
+    fi
+'
