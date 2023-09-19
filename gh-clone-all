@@ -2,13 +2,17 @@
 
 set -euo pipefail
 
+fork='false'
 user=
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -f|--fork)
+            fork='true'
+            ;;
         -h|--help)
-            printf 'Usage: gh clone-all <user|org>\n'
-            printf '       gh clone-all https://github.com/<user|org>\n'
+            printf 'Usage: gh clone-all [-f | --fork] <user|org>\n'
+            printf '       gh clone-all [-f | --fork] https://github.com/<user|org>\n'
             exit 0
             ;;
         *)
@@ -27,10 +31,10 @@ fi
 get_repos() {
     local owner="$1"
 
-    gh api graphql --paginate -q '.data.repositoryOwner.repositories.nodes[] | .nameWithOwner' -F owner="$owner" -f query='
-        query($owner: String! $endCursor: String) {
+    gh api graphql --paginate -q '.data.repositoryOwner.repositories.nodes[] | .nameWithOwner' -F owner="$owner" -F isFork="$fork" -f query='
+        query($owner: String! $isFork: Boolean $endCursor: String) {
             repositoryOwner(login: $owner) {
-                repositories(first: 100 ownerAffiliations: OWNER isFork: false orderBy: { field: NAME direction: ASC} after: $endCursor) {
+                repositories(first: 100 ownerAffiliations: OWNER isFork: $isFork orderBy: { field: NAME direction: ASC} after: $endCursor) {
                     totalCount pageInfo { hasNextPage endCursor } nodes { nameWithOwner }
                 }
             }
