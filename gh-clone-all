@@ -31,6 +31,7 @@ fi
 get_repos() {
     local owner="$1"
 
+    # shellcheck disable=SC2016 # Expressions don't expand in single quotes, use double quotes for that.
     gh api graphql --paginate -q '.data.repositoryOwner.repositories.nodes[] | .nameWithOwner' -F owner="$owner" -F isFork="$fork" -f query='
         query($owner: String! $isFork: Boolean $endCursor: String) {
             repositoryOwner(login: $owner) {
@@ -42,6 +43,7 @@ get_repos() {
     '
 }
 
+# shellcheck disable=SC2016 # Expressions don't expand in single quotes, use double quotes for that.
 get_repos "${user#https://github.com/}" | xargs -r -I '{}' -- sh -c '
     if [[ ! -d "$( basename "{}" )" ]]; then
         gh repo clone "{}"
